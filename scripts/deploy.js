@@ -3,11 +3,11 @@ const hre = require("hardhat");
 async function main() {
   
 
-  const ENSContract  = await ethers.deployContract("ENSContract"); 
-  await ENSContract.waitForDeployment();
+  const TeeWhyChat  = await ethers.deployContract("TeeWhyChat"); 
+  await TeeWhyChat.waitForDeployment();
   
   console.log(
-    `ENSContract  contract deployed to ${ENSContract.target}`
+    `TeeWhyChat  contract deployed to ${TeeWhyChat.target}`
   );
 
  
