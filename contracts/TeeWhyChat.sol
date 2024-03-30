@@ -1,27 +1,68 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
+
+import "./IENS.sol";
 
 contract TeeWhyChat {
-
-    struct TheChat {
-        address sender; 
-        string content; 
-        uint256 timestamp; 
+    struct Message {
+        string content;
+        string sender;
+        string recipient;
     }
 
-    mapping(string => TheChat[]) public userChatHistory;
+    IENS internal ENS;
 
-    function sendMessage(string memory username, string memory content) public {
-        TheChat memory message = TheChat({
-            sender: msg.sender,
+    // Mapping from a concatenated string of sender and recipient names to an array of messages
+    mapping(string => Message[]) public conversations;
+
+    // string conversationId;
+
+    constructor(address _ensAddress) {
+        ENS = IENS(_ensAddress);
+    }
+
+    function sendMessage(string memory content, string memory recipient)
+        public
+    {
+        string memory _sender = ENS.getNameByAddress(msg.sender);
+        string memory conversationId = string.concat(_sender, recipient);
+        // conversationId =  _sender + recipient ;
+
+        // Create a new message
+        Message memory newMessage = Message({
             content: content,
-            timestamp: block.timestamp
+            sender: _sender,
+            recipient: recipient
         });
-        
-        userChatHistory[username].push(message);
+
+        // Add the message to the conversation
+        string memory _reverseConversationId = string.concat(
+            recipient,
+            _sender
+        );
+
+        if (conversations[_reverseConversationId].length > 0) {
+            conversations[_reverseConversationId].push(newMessage);
+        } else {
+            conversations[conversationId].push(newMessage);
+        }
     }
 
-    function getChatHistory(string memory username) public view returns (TheChat[] memory) {
-        return userChatHistory[username];
+    function getMessages(string memory _sender, string memory _recipient)
+        public
+        view
+        returns (Message[] memory)
+    {
+        string memory _conversationId = string.concat(_sender, _recipient);
+        string memory _reverseConversationId = string.concat(
+            _recipient,
+            _sender
+        );
+
+        if (conversations[_reverseConversationId].length > 0) {
+            return conversations[_reverseConversationId];
+        } else {
+            return conversations[_conversationId];
+        }
     }
 }

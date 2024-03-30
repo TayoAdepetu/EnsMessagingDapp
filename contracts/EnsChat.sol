@@ -1,65 +1,62 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.13;
 
 contract EnsChat {
-    struct UserData {
+    struct UserInfo {
         string name;
-        string imageIPFSHash;
-        string email;
-        string gender;
-    }
-    //mapping of ENS names to user data
-    mapping(string => UserData) public users;
-
-    //events that will trigger when a new user registers
-    event UserRegistered(
-        string indexed ensName,
-        string name,
-        string imageIPFSHash,
-        string email
-    );
-
-    constructor() {}
-
-    // Function to register a new ENS name with associated user data
-    function registerUser(
-        string memory ensName,
-        string memory name,
-        string memory imageIPFSHash,
-        string memory email
-    ) public {
-        require(
-            bytes(users[ensName].name).length == 0,
-            "ENS name already registered"
-        );
-        users[ensName] = UserData(ensName, name, imageIPFSHash, email);
-        emit UserRegistered(ensName, name, imageIPFSHash, email);
+        string imageUrl;
+        address userAddress;
     }
 
-    // Function to update user data
-    function updateUser(
-        string memory ensName,
-        string memory name,
-        string memory imageIPFSHash,
-        string memory email
-    ) public {
-        require(
-            bytes(users[ensName].name).length != 0,
-            "ENS name not registered"
-        );
-        users[ensName].name = name;
-        users[ensName].imageIPFSHash = imageIPFSHash;
-        users[ensName].email = email; // Update email field
+    mapping(string => address) public ensMapping;
+    mapping(address => UserInfo) public userMapping;
+    mapping(address => string) public reverseEnsMapping;
+    UserInfo[] public users;
+
+    modifier nameAndUserNotExists(string memory name) {
+        require(ensMapping[name] == address(0), "Name already in use");
+        require(bytes(reverseEnsMapping[msg.sender]).length == 0, "User already created");
+        _;
     }
 
-    // Function to retrieve user data based on ENS name
-    function getUserData(
-        string memory ensName
-    ) public view returns (string memory, string memory, string memory) {
-        return (
-            users[ensName].name,
-            users[ensName].imageIPFSHash,
-            users[ensName].email
-        );
+    function createENS(string memory name, string memory imageUrl) public nameAndUserNotExists(name) {
+        UserInfo memory userInfo = UserInfo(name, imageUrl, msg.sender);
+        ensMapping[name] = msg.sender;
+        userMapping[msg.sender] = userInfo;
+        reverseEnsMapping[msg.sender] = name;
+
+        users.push(userInfo);
+    }
+
+    function getAddressByName(string memory name) public view returns (address) {
+        return ensMapping[name];
+    }
+
+    function getNameByAddress(address addr) public view returns (string memory) {
+        return reverseEnsMapping[addr];
+    }
+
+    function getUserInfo(address addr) public view returns (string memory, string memory) {
+        UserInfo memory userInfo = userMapping[addr];
+        return (userInfo.name, userInfo.imageUrl);
+    }
+
+    function getUserInfoByName(string memory name) public view returns (string memory, string memory) {
+        address addr = ensMapping[name];
+        require(addr != address(0), "Name does not exist");
+        UserInfo memory userInfo = userMapping[addr];
+        return (userInfo.name, userInfo.imageUrl);
+    }
+
+    function userExists(address addr) public view returns (bool) {
+        return bytes(reverseEnsMapping[addr]).length != 0;
+    }
+
+    function nameExists(string memory name) public view returns (bool) {
+        return ensMapping[name] != address(0);
+    }
+
+    function getAllUsers() public view returns (UserInfo[] memory) {
+        return users;
     }
 }
